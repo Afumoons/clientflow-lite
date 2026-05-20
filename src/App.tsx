@@ -109,7 +109,7 @@ function Landing({ session }: { session: Session | null }) {
         <div className="ambient-orb one" />
         <div className="ambient-orb two" />
         <nav className="topbar">
-          <a className="brand" href="#top"><span>CF</span><strong>ClientFlow</strong><small>Lite</small></a>
+          <a className="brand" href="#top"><span><img src="/clientflow-lite/clientflow-icon.png" alt="" /></span><strong>ClientFlow</strong><small>Lite</small></a>
           <div>
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
@@ -133,7 +133,7 @@ function Landing({ session }: { session: Session | null }) {
           </div>
           <div className="product-card airtable-preview" aria-label="Client portal preview">
             <div className="preview-toolbar">
-              <div className="base-icon">CF</div>
+              <div className="base-icon"><img src="/clientflow-lite/clientflow-icon.png" alt="" /></div>
               <div><p className="mini-label">Client base</p><h3>Website Redesign Sprint</h3></div>
               <button><Search size={15} /> Filter</button>
             </div>
