@@ -31,6 +31,16 @@ const emptyData: AppData = {
   invoices: [],
 }
 
+const productionRedirectUrl = 'https://afumoons.github.io/clientflow-lite/'
+
+function getAuthRedirectUrl() {
+  const configured = import.meta.env.VITE_AUTH_REDIRECT_URL as string | undefined
+  if (configured) return configured
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return productionRedirectUrl
+  if (window.location.hostname === 'afumoons.github.io') return productionRedirectUrl
+  return window.location.origin
+}
+
 function currency(amount: number | null | undefined, code = 'USD') {
   if (!amount) return '—'
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: code, maximumFractionDigits: 0 }).format(amount)
@@ -56,7 +66,7 @@ function AuthPanel() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: getAuthRedirectUrl(),
         data: { full_name: name || email.split('@')[0] },
       },
     })
