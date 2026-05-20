@@ -31,13 +31,14 @@ const emptyData: AppData = {
   invoices: [],
 }
 
-const productionRedirectUrl = 'https://afumoons.github.io/clientflow-lite/'
+const productionRedirectUrl = 'https://clientflow-lite.vercel.app/'
+const publicAssetBase = import.meta.env.BASE_URL
+const clientflowIconUrl = `${publicAssetBase}clientflow-icon.png`
 
 function getAuthRedirectUrl() {
   const configured = import.meta.env.VITE_AUTH_REDIRECT_URL as string | undefined
   if (configured) return configured
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return productionRedirectUrl
-  if (window.location.hostname === 'afumoons.github.io') return productionRedirectUrl
   return window.location.origin
 }
 
@@ -119,7 +120,7 @@ function Landing({ session }: { session: Session | null }) {
         <div className="ambient-orb one" />
         <div className="ambient-orb two" />
         <nav className="topbar">
-          <a className="brand" href="#top"><span><img src="/clientflow-lite/clientflow-icon.png" alt="" /></span><strong>ClientFlow</strong><small>Lite</small></a>
+          <a className="brand" href="#top"><span><img src={clientflowIconUrl} alt="" /></span><strong>ClientFlow</strong><small>Lite</small></a>
           <div>
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
@@ -143,7 +144,7 @@ function Landing({ session }: { session: Session | null }) {
           </div>
           <div className="product-card airtable-preview" aria-label="Client portal preview">
             <div className="preview-toolbar">
-              <div className="base-icon"><img src="/clientflow-lite/clientflow-icon.png" alt="" /></div>
+              <div className="base-icon"><img src={clientflowIconUrl} alt="" /></div>
               <div><p className="mini-label">Client base</p><h3>Website Redesign Sprint</h3></div>
               <button><Search size={15} /> Filter</button>
             </div>
