@@ -129,7 +129,7 @@ function Landing({ session }: { session: Session | null }) {
         </nav>
         <div className="hero-grid" id="top">
           <div className="hero-copy">
-            <p className="eyebrow"><Sparkles size={16} /> Airtable-style client ops for solo devs</p>
+            <p className="eyebrow"><Sparkles size={16} /> Client ops for solo devs</p>
             <h1>Run every client sprint like a polished workspace.</h1>
             <p className="hero-lede">ClientFlow Lite turns messy freelance delivery into a shared base: projects as records, milestones as fields, approvals as status chips, and payments visible without enterprise bloat.</p>
             <div className="hero-actions">
@@ -142,14 +142,14 @@ function Landing({ session }: { session: Session | null }) {
               <span>Freelancer-friendly portal</span>
             </div>
           </div>
-          <div className="product-card airtable-preview" aria-label="Client portal preview">
+          <div className="product-card workspace-preview" aria-label="Client portal preview">
             <div className="preview-toolbar">
               <div className="base-icon"><img src={clientflowIconUrl} alt="" /></div>
               <div><p className="mini-label">Client base</p><h3>Website Redesign Sprint</h3></div>
               <button><Search size={15} /> Filter</button>
             </div>
             <div className="view-tabs"><span className="active"><Grid3X3 size={14} /> Grid</span><span>Kanban</span><span>Timeline</span></div>
-            <div className="airtable-grid">
+            <div className="workspace-grid">
               <div className="grid-head">Milestone</div><div className="grid-head">Owner</div><div className="grid-head">Status</div><div className="grid-head">Value</div>
               <div>Homepage approved</div><div>Afu Studio</div><div><b className="chip green">Done</b></div><div>$800</div>
               <div>Checkout QA</div><div>Client</div><div><b className="chip amber">Review</b></div><div>$450</div>
@@ -330,7 +330,7 @@ function Dashboard({ session }: { session: Session }) {
         <div>
           <p className="eyebrow"><Table2 size={16} /> Founder beta workspace</p>
           <h2>{data.workspace?.studio_name || data.workspace?.name || 'Your studio'} workspace</h2>
-          <p>Signed in as {session.user.email}. Airtable-inspired command center: dense, readable records for scope, approvals, tasks, and manual invoices.</p>
+          <p>Signed in as {session.user.email}. A dense, readable command center for scope, approvals, tasks, and manual invoices.</p>
         </div>
         <button className="ghost" onClick={signOut}><DoorOpen size={18} /> Sign out</button>
       </div>

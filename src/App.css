@@ -84,10 +84,10 @@ h3 { margin: 0; }
 .view-tabs { display: flex; gap: 6px; border-top: 1px solid var(--theme-soft-line); border-bottom: 1px solid var(--theme-soft-line); padding: 8px; color: var(--theme-weak); font-size: .84rem; }
 .view-tabs span { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 10px; }
 .view-tabs .active { color: var(--theme-blue); background: #eaf2ff; font-weight: 850; }
-.airtable-grid { display: grid; grid-template-columns: 1.25fr .85fr .78fr .64fr; overflow: hidden; border: 1px solid var(--theme-soft-line); border-radius: 16px; margin-top: 14px; font-size: .88rem; background: #fff; }
-.airtable-grid > div { min-height: 44px; padding: 12px; border-right: 1px solid var(--theme-soft-line); border-bottom: 1px solid var(--theme-soft-line); display: flex; align-items: center; }
-.airtable-grid > div:nth-child(4n) { border-right: 0; }
-.airtable-grid > div:nth-last-child(-n + 4) { border-bottom: 0; }
+.workspace-grid { display: grid; grid-template-columns: 1.25fr .85fr .78fr .64fr; overflow: hidden; border: 1px solid var(--theme-soft-line); border-radius: 16px; margin-top: 14px; font-size: .88rem; background: #fff; }
+.workspace-grid > div { min-height: 44px; padding: 12px; border-right: 1px solid var(--theme-soft-line); border-bottom: 1px solid var(--theme-soft-line); display: flex; align-items: center; }
+.workspace-grid > div:nth-child(4n) { border-right: 0; }
+.workspace-grid > div:nth-last-child(-n + 4) { border-bottom: 0; }
 .grid-head { background: #f6f8fb; color: var(--theme-weak); font-size: .76rem; font-weight: 900; text-transform: uppercase; }
 .chip { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 9px; font-size: .74rem; line-height: 1; }
 .chip.green { color: #006400; background: #def7e8; }
@@ -161,6 +161,6 @@ footer a { display: inline-flex; gap: 8px; align-items: center; color: var(--the
   .feature-grid, .metric-grid { grid-template-columns: 1fr; }
   .hero-actions, .dash-top, .project-header, footer { flex-direction: column; }
   h1 { font-size: 3.15rem; }
-  .airtable-grid { grid-template-columns: 1.2fr .8fr; }
-  .airtable-grid > div:nth-child(4n) { border-right: 1px solid var(--theme-soft-line); }
+  .workspace-grid { grid-template-columns: 1.2fr .8fr; }
+  .workspace-grid > div:nth-child(4n) { border-right: 1px solid var(--theme-soft-line); }
 }
