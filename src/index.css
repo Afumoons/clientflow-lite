@@ -1,6 +1,6 @@
 @font-face {
-  font-family: Satoshi;
-  src: local("Segoe UI");
+  font-family: Aptos;
+  src: local("Aptos"), local("Segoe UI");
   font-display: swap;
 }
 
@@ -9,6 +9,6 @@
 }
 
 ::selection {
-  background: #d9ff5a;
-  color: #0d1110;
+  background: #1b61c9;
+  color: #ffffff;
 }

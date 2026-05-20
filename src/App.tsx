@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { ArrowRight, CheckCircle2, CircleDollarSign, Clock3, DoorOpen, FolderKanban, Link2, LockKeyhole, Mail, Plus, Sparkles, Users2 } from 'lucide-react'
+import { ArrowRight, DoorOpen, Grid3X3, Link2, LockKeyhole, Mail, Plus, Search, Sparkles, Table2, Users2 } from 'lucide-react'
 import type { Session } from '@supabase/supabase-js'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import type { Approval, Invoice, Milestone, Project, Task, Workspace } from './types'
 import './App.css'
+
+gsap.registerPlugin(ScrollTrigger)
 
 const projectStatuses: Project['status'][] = ['proposal', 'active', 'review', 'completed', 'paused']
 const taskStatuses: Task['status'][] = ['todo', 'doing', 'blocked', 'done']
@@ -33,10 +37,16 @@ function currency(amount: number | null | undefined, code = 'USD') {
 }
 
 function AuthPanel() {
+  const panelRef = useRef<HTMLElement | null>(null)
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!panelRef.current) return
+    gsap.fromTo(panelRef.current, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out', scrollTrigger: { trigger: panelRef.current, start: 'top 82%' } })
+  }, [])
 
   async function signIn(event: FormEvent) {
     event.preventDefault()
@@ -55,7 +65,7 @@ function AuthPanel() {
   }
 
   return (
-    <section className="auth-card" id="app">
+    <section className="auth-card" id="app" ref={panelRef}>
       <div>
         <p className="eyebrow"><LockKeyhole size={16} /> Founder beta access</p>
         <h2>Start with one clean client portal.</h2>
@@ -78,11 +88,28 @@ function AuthPanel() {
 }
 
 function Landing({ session }: { session: Session | null }) {
+  const heroRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.fromTo('.topbar', { y: -18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out' })
+      gsap.fromTo('.hero-copy > *', { y: 36, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, stagger: 0.08, ease: 'power3.out', delay: 0.12 })
+      gsap.fromTo('.product-card', { y: 44, rotate: -2, opacity: 0, scale: 0.96 }, { y: 0, rotate: 1.25, opacity: 1, scale: 1, duration: 1, ease: 'expo.out', delay: 0.2 })
+      gsap.to('.product-card', { y: -18, rotate: -0.25, scrollTrigger: { trigger: '.hero-shell', start: 'top top', end: 'bottom top', scrub: 1 } })
+      gsap.fromTo('.feature-grid article, .price-card', { y: 34, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, stagger: 0.08, ease: 'power3.out', scrollTrigger: { trigger: '#features', start: 'top 72%' } })
+      gsap.to('.ambient-orb.one', { x: 80, y: -30, scrollTrigger: { trigger: '.hero-shell', start: 'top top', end: 'bottom top', scrub: 1.2 } })
+      gsap.to('.ambient-orb.two', { x: -70, y: 48, scrollTrigger: { trigger: '.hero-shell', start: 'top top', end: 'bottom top', scrub: 1.2 } })
+    }, heroRef)
+    return () => ctx.revert()
+  }, [])
+
   return (
     <>
-      <section className="hero-shell">
+      <section className="hero-shell" ref={heroRef}>
+        <div className="ambient-orb one" />
+        <div className="ambient-orb two" />
         <nav className="topbar">
-          <a className="brand" href="#top"><span>CF</span> ClientFlow Lite</a>
+          <a className="brand" href="#top"><span>CF</span><strong>ClientFlow</strong><small>Lite</small></a>
           <div>
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
@@ -91,33 +118,38 @@ function Landing({ session }: { session: Session | null }) {
         </nav>
         <div className="hero-grid" id="top">
           <div className="hero-copy">
-            <p className="eyebrow"><Sparkles size={16} /> Global client portal for solo devs</p>
-            <h1>Stop running client projects from scattered chats.</h1>
-            <p className="hero-lede">ClientFlow Lite gives freelance developers and micro-agencies a clean link for milestones, approvals, tasks, and payment status — without adding another bloated project-management tool.</p>
+            <p className="eyebrow"><Sparkles size={16} /> Airtable-style client ops for solo devs</p>
+            <h1>Run every client sprint like a polished workspace.</h1>
+            <p className="hero-lede">ClientFlow Lite turns messy freelance delivery into a shared base: projects as records, milestones as fields, approvals as status chips, and payments visible without enterprise bloat.</p>
             <div className="hero-actions">
               <a className="primary" href={session ? '#dashboard' : '#app'}>{session ? 'Go to dashboard' : 'Create free beta portal'} <ArrowRight size={18} /></a>
               <a className="secondary" href="#features">See what it replaces</a>
             </div>
             <div className="proof-row">
-              <span>Built for $0 stack</span>
+              <span>Grid-first UX</span>
               <span>Vercel + Supabase</span>
-              <span>Export-friendly MVP</span>
+              <span>Freelancer-friendly portal</span>
             </div>
           </div>
-          <div className="product-card" aria-label="Client portal preview">
-            <div className="card-head"><span></span><span></span><span></span></div>
-            <p className="mini-label">Project portal</p>
-            <h3>Website Redesign Sprint</h3>
-            <div className="progress"><span style={{ width: '68%' }} /></div>
-            <div className="portal-row"><CheckCircle2 /> Homepage approved <strong>Done</strong></div>
-            <div className="portal-row"><Clock3 /> Checkout QA <strong>Review</strong></div>
-            <div className="portal-row"><CircleDollarSign /> Invoice #02 <strong>Sent</strong></div>
+          <div className="product-card airtable-preview" aria-label="Client portal preview">
+            <div className="preview-toolbar">
+              <div className="base-icon">CF</div>
+              <div><p className="mini-label">Client base</p><h3>Website Redesign Sprint</h3></div>
+              <button><Search size={15} /> Filter</button>
+            </div>
+            <div className="view-tabs"><span className="active"><Grid3X3 size={14} /> Grid</span><span>Kanban</span><span>Timeline</span></div>
+            <div className="airtable-grid">
+              <div className="grid-head">Milestone</div><div className="grid-head">Owner</div><div className="grid-head">Status</div><div className="grid-head">Value</div>
+              <div>Homepage approved</div><div>Afu Studio</div><div><b className="chip green">Done</b></div><div>$800</div>
+              <div>Checkout QA</div><div>Client</div><div><b className="chip amber">Review</b></div><div>$450</div>
+              <div>Invoice #02</div><div>Finance</div><div><b className="chip blue">Sent</b></div><div>$500</div>
+            </div>
             <div className="client-note">“Everything I need is in one link. No more hunting through Slack.”</div>
           </div>
         </div>
       </section>
 
-      <section className="section" id="features">
+      <section className="section floating-section" id="features">
         <p className="eyebrow">What it replaces</p>
         <h2>One lightweight command center for the messy middle of client work.</h2>
         <div className="feature-grid">
@@ -151,6 +183,7 @@ function Landing({ session }: { session: Session | null }) {
 }
 
 function Dashboard({ session }: { session: Session }) {
+  const dashboardRef = useRef<HTMLElement | null>(null)
   const [data, setData] = useState<AppData>(emptyData)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -215,8 +248,18 @@ function Dashboard({ session }: { session: Session }) {
   }
 
   useEffect(() => {
-    loadData()
+    void Promise.resolve().then(() => loadData())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (loading || !dashboardRef.current) return
+    const ctx = gsap.context(() => {
+      gsap.fromTo('.dash-top, .sidebar-panel, .workspace-panel', { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, stagger: 0.08, ease: 'power3.out' })
+      gsap.fromTo('.metric-grid article, .board-card', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, stagger: 0.05, ease: 'power2.out', delay: 0.12 })
+    }, dashboardRef)
+    return () => ctx.revert()
+  }, [loading, selectedProjectId, data.projects.length])
 
   async function createProject(event: FormEvent) {
     event.preventDefault()
@@ -271,12 +314,12 @@ function Dashboard({ session }: { session: Session }) {
   if (loading) return <section className="dashboard loading"><div className="pulse" /> Loading your portal…</section>
 
   return (
-    <section className="dashboard" id="dashboard">
+    <section className="dashboard" id="dashboard" ref={dashboardRef}>
       <div className="dash-top">
         <div>
-          <p className="eyebrow"><FolderKanban size={16} /> Founder beta dashboard</p>
-          <h2>{data.workspace?.studio_name || data.workspace?.name || 'Your studio'} command center</h2>
-          <p>Signed in as {session.user.email}. Keep project scope, approvals, tasks, and manual invoices visible.</p>
+          <p className="eyebrow"><Table2 size={16} /> Founder beta workspace</p>
+          <h2>{data.workspace?.studio_name || data.workspace?.name || 'Your studio'} workspace</h2>
+          <p>Signed in as {session.user.email}. Airtable-inspired command center: dense, readable records for scope, approvals, tasks, and manual invoices.</p>
         </div>
         <button className="ghost" onClick={signOut}><DoorOpen size={18} /> Sign out</button>
       </div>
@@ -284,7 +327,7 @@ function Dashboard({ session }: { session: Session }) {
       {error && <div className="error-box">{error}</div>}
 
       <div className="dash-grid">
-        <aside className="sidebar-panel">
+        <aside className="sidebar-panel app-sidebar">
           <h3>Create project</h3>
           <form onSubmit={createProject} className="compact-form">
             <input value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="Project name" />
@@ -303,7 +346,7 @@ function Dashboard({ session }: { session: Session }) {
           </div>
         </aside>
 
-        <main className="workspace-panel">
+        <main className="workspace-panel table-surface">
           {selectedProject ? (
             <>
               <div className="project-header">
@@ -356,7 +399,7 @@ function App() {
 
   useEffect(() => {
     if (!supabase) {
-      setBooting(false)
+      queueMicrotask(() => setBooting(false))
       return
     }
     supabase.auth.getSession().then(({ data }) => {
