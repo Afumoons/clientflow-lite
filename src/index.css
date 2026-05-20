@@ -1,0 +1,14 @@
+@font-face {
+  font-family: Satoshi;
+  src: local("Segoe UI");
+  font-display: swap;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: #d9ff5a;
+  color: #0d1110;
+}
