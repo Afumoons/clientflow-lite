@@ -1,3 +1,5 @@
+export type WorkspaceRole = 'owner' | 'member' | 'client'
+
 export type Workspace = {
   id: string
   owner_id: string
@@ -5,11 +7,30 @@ export type Workspace = {
   studio_name: string | null
 }
 
+export type WorkspaceMember = {
+  workspace_id: string
+  user_id: string
+  role: WorkspaceRole
+  workspaces?: Workspace | Workspace[] | null
+}
+
+export type ProjectInvite = {
+  id: string
+  project_id: string
+  invited_email: string | null
+  token_hash: string
+  accepted_by: string | null
+  accepted_at: string | null
+  expires_at: string
+  created_at: string
+}
+
 export type Project = {
   id: string
   workspace_id: string
   name: string
   client_name: string
+  client_email: string | null
   status: 'proposal' | 'active' | 'review' | 'completed' | 'paused'
   budget_amount: number | null
   currency: string
@@ -44,6 +65,7 @@ export type Approval = {
   title: string
   status: 'pending' | 'approved' | 'revision_requested'
   note: string | null
+  decided_at: string | null
 }
 
 export type Invoice = {
