@@ -112,7 +112,15 @@ label { color: var(--theme-weak); font-size: .9rem; display: grid; gap: 8px; }
 input, select { width: 100%; border: 1px solid var(--theme-line); background: #fff; color: var(--theme-ink); border-radius: 12px; padding: 13px 14px; outline: none; }
 input:focus, select:focus { border-color: rgba(45,127,249,.8); box-shadow: 0 0 0 4px rgba(45,127,249,.1); }
 .form-status { color: var(--theme-blue) !important; }
-.error-box { border: 1px solid rgba(201,47,123,.35); background: rgba(201,47,123,.08); color: #7c1e4f; padding: 14px 16px; border-radius: 18px; margin: 16px; }
+.error-box, .success-box { border: 1px solid rgba(201,47,123,.35); background: rgba(201,47,123,.08); color: #7c1e4f; padding: 14px 16px; border-radius: 18px; margin: 16px; }
+.success-box { border-color: rgba(15,139,76,.35); background: rgba(15,139,76,.08); color: #09663a; display: flex; align-items: center; gap: 10px; }
+.approval-item { border-top: 1px solid var(--theme-soft-line); padding-bottom: 12px; }
+.approval-item .line-item { border-top: 0; }
+.approval-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.approval-actions button, .invite-flow button { border: 1px solid var(--theme-line); border-radius: 10px; background: #fff; color: var(--theme-blue); padding: 8px 10px; display: inline-flex; align-items: center; gap: 6px; font-weight: 800; }
+.invite-flow { display: grid; gap: 8px; min-width: 0; }
+.invite-flow code { display: block; white-space: normal; word-break: break-all; color: var(--theme-ink); background: #fff; border: 1px solid var(--theme-soft-line); border-radius: 10px; padding: 9px; }
+.secondary-button { color: var(--theme-ink) !important; }
 
 .dashboard { max-width: 1420px; margin: 0 auto 90px; padding: 32px clamp(18px, 4vw, 44px); }
 .dashboard.loading { min-height: 50vh; display: grid; place-items: center; color: var(--theme-weak); }

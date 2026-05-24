@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { ArrowRight, DoorOpen, Grid3X3, Link2, LockKeyhole, Mail, Plus, Search, Sparkles, Table2, Users2 } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Copy, DoorOpen, Grid3X3, Link2, LockKeyhole, Mail, Plus, Search, ShieldCheck, Sparkles, Table2, Users2, XCircle } from 'lucide-react'
 import type { Session } from '@supabase/supabase-js'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { buildInviteUrl, canManageProjectData, createInviteToken, getAuthRedirectUrl as resolveAuthRedirectUrl, isClientMember, normalizeInviteToken, sha256Hex } from './lib/clientPortalWorkflow'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
-import type { Approval, Invoice, Milestone, Project, Task, Workspace } from './types'
+import type { Approval, Invoice, Milestone, Project, ProjectInvite, Task, Workspace, WorkspaceMember, WorkspaceRole } from './types'
 import './App.css'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -15,31 +16,31 @@ const taskStatuses: Task['status'][] = ['todo', 'doing', 'blocked', 'done']
 
 type AppData = {
   workspace: Workspace | null
+  memberships: WorkspaceMember[]
   projects: Project[]
   milestones: Milestone[]
   tasks: Task[]
   approvals: Approval[]
   invoices: Invoice[]
+  invites: ProjectInvite[]
 }
 
 const emptyData: AppData = {
   workspace: null,
+  memberships: [],
   projects: [],
   milestones: [],
   tasks: [],
   approvals: [],
   invoices: [],
+  invites: [],
 }
 
-const productionRedirectUrl = 'https://clientflow-lite.vercel.app/'
 const publicAssetBase = import.meta.env.BASE_URL
 const clientflowIconUrl = `${publicAssetBase}clientflow-icon.png`
 
 function getAuthRedirectUrl() {
-  const configured = import.meta.env.VITE_AUTH_REDIRECT_URL as string | undefined
-  if (configured) return configured
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return productionRedirectUrl
-  return window.location.origin
+  return resolveAuthRedirectUrl(window.location.href, import.meta.env.VITE_AUTH_REDIRECT_URL as string | undefined)
 }
 
 function currency(amount: number | null | undefined, code = 'USD') {
@@ -47,7 +48,7 @@ function currency(amount: number | null | undefined, code = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: code, maximumFractionDigits: 0 }).format(amount)
 }
 
-function AuthPanel() {
+function AuthPanel({ inviteToken }: { inviteToken: string | null }) {
   const panelRef = useRef<HTMLElement | null>(null)
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
@@ -64,23 +65,25 @@ function AuthPanel() {
     if (!supabase) return
     setLoading(true)
     setStatus(null)
+    const redirectUrl = new URL(getAuthRedirectUrl())
+    if (inviteToken) redirectUrl.searchParams.set('invite', inviteToken)
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: getAuthRedirectUrl(),
+        emailRedirectTo: redirectUrl.toString(),
         data: { full_name: name || email.split('@')[0] },
       },
     })
     setLoading(false)
-    setStatus(error ? error.message : 'Check your inbox for the magic link. This keeps the MVP passwordless and zero-cost.')
+    setStatus(error ? error.message : inviteToken ? 'Check your inbox. The magic link will attach you to the invited client portal.' : 'Check your inbox for the magic link. This keeps the MVP passwordless and zero-cost.')
   }
 
   return (
     <section className="auth-card" id="app" ref={panelRef}>
       <div>
-        <p className="eyebrow"><LockKeyhole size={16} /> Founder beta access</p>
-        <h2>Start with one clean client portal.</h2>
-        <p>Use magic-link login, create a project, track milestones, approvals, tasks, and payment status from one polished dashboard.</p>
+        <p className="eyebrow"><LockKeyhole size={16} /> {inviteToken ? 'Client invite access' : 'Founder beta access'}</p>
+        <h2>{inviteToken ? 'Open your invited client portal.' : 'Start with one clean client portal.'}</h2>
+        <p>{inviteToken ? 'Sign in with your email to accept the invite, review milestones, approve work, and track invoice status.' : 'Use magic-link login, create a project, track milestones, approvals, tasks, and payment status from one polished dashboard.'}</p>
       </div>
       <form onSubmit={signIn}>
         <label>
@@ -193,7 +196,7 @@ function Landing({ session }: { session: Session | null }) {
   )
 }
 
-function Dashboard({ session }: { session: Session }) {
+function Dashboard({ session, inviteToken }: { session: Session, inviteToken: string | null }) {
   const dashboardRef = useRef<HTMLElement | null>(null)
   const [data, setData] = useState<AppData>(emptyData)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
@@ -202,11 +205,22 @@ function Dashboard({ session }: { session: Session }) {
   const [error, setError] = useState<string | null>(null)
   const [projectName, setProjectName] = useState('')
   const [clientName, setClientName] = useState('')
+  const [clientEmail, setClientEmail] = useState('')
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null)
+  const [inviteStatus, setInviteStatus] = useState<string | null>(null)
+  const [acceptingInvite, setAcceptingInvite] = useState(false)
 
   const selectedProject = useMemo(
     () => data.projects.find((project) => project.id === selectedProjectId) ?? data.projects[0] ?? null,
     [data.projects, selectedProjectId],
   )
+  const membershipByWorkspace = useMemo(() => new Map(data.memberships.map((membership) => [membership.workspace_id, membership])), [data.memberships])
+  const selectedMembership = selectedProject ? membershipByWorkspace.get(selectedProject.workspace_id) : null
+  const selectedWorkspaceValue = selectedMembership?.workspaces
+  const selectedWorkspace = (Array.isArray(selectedWorkspaceValue) ? selectedWorkspaceValue[0] : selectedWorkspaceValue) ?? data.workspace
+  const selectedRole = selectedMembership?.role ?? null
+  const canManageSelectedProject = canManageProjectData(selectedRole)
+  const isSelectedClient = isClientMember(selectedRole)
 
   const projectMilestones = data.milestones.filter((item) => item.project_id === selectedProject?.id)
   const projectTasks = data.tasks.filter((item) => item.project_id === selectedProject?.id)
@@ -215,15 +229,14 @@ function Dashboard({ session }: { session: Session }) {
   const approvedCount = projectApprovals.filter((item) => item.status === 'approved').length
   const doneTaskCount = projectTasks.filter((item) => item.status === 'done').length
 
-  async function loadData() {
+  async function loadData(preferredProjectId?: string) {
     if (!supabase) return
     setLoading(true)
     setError(null)
     const { data: membershipRows, error: memberError } = await supabase
       .from('workspace_members')
-      .select('workspace_id, workspaces(*)')
+      .select('workspace_id, user_id, role, workspaces(*)')
       .eq('user_id', session.user.id)
-      .limit(1)
 
     if (memberError) {
       setError(memberError.message)
@@ -231,35 +244,69 @@ function Dashboard({ session }: { session: Session }) {
       return
     }
 
-    const workspace = (membershipRows?.[0]?.workspaces as unknown as Workspace | null) ?? null
-    if (!workspace) {
-      setError('Workspace is still being prepared. Refresh in a moment after magic-link signup.')
+    const memberships = (membershipRows ?? []) as unknown as WorkspaceMember[]
+    const primaryMembership = memberships.find((membership) => canManageProjectData(membership.role)) ?? memberships[0] ?? null
+    const workspaceValue = primaryMembership?.workspaces
+    const workspace = (Array.isArray(workspaceValue) ? workspaceValue[0] : workspaceValue) ?? null
+
+    const { data: projects, error: projectsError } = await supabase
+      .from('projects')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (projectsError) {
+      setError(projectsError.message)
       setLoading(false)
       return
     }
 
-    const [{ data: projects }, { data: milestones }, { data: tasks }, { data: approvals }, { data: invoices }] = await Promise.all([
-      supabase.from('projects').select('*').eq('workspace_id', workspace.id).order('created_at', { ascending: false }),
-      supabase.from('milestones').select('*').order('sort_order', { ascending: true }),
-      supabase.from('tasks').select('*').order('created_at', { ascending: true }),
-      supabase.from('approvals').select('*').order('created_at', { ascending: false }),
-      supabase.from('invoices').select('*').order('created_at', { ascending: false }),
-    ])
+    const projectRows = (projects ?? []) as Project[]
+    const projectIds = projectRows.map((project) => project.id)
+    const emptyChildren = { data: [] }
+    const [{ data: milestones }, { data: tasks }, { data: approvals }, { data: invoices }, { data: invites }] = projectIds.length ? await Promise.all([
+      supabase.from('milestones').select('*').in('project_id', projectIds).order('sort_order', { ascending: true }),
+      supabase.from('tasks').select('*').in('project_id', projectIds).order('created_at', { ascending: true }),
+      supabase.from('approvals').select('*').in('project_id', projectIds).order('created_at', { ascending: false }),
+      supabase.from('invoices').select('*').in('project_id', projectIds).order('created_at', { ascending: false }),
+      supabase.from('project_invites').select('*').in('project_id', projectIds).order('created_at', { ascending: false }),
+    ]) : [emptyChildren, emptyChildren, emptyChildren, emptyChildren, emptyChildren]
 
     setData({
       workspace,
-      projects: projects ?? [],
-      milestones: milestones ?? [],
-      tasks: tasks ?? [],
-      approvals: approvals ?? [],
-      invoices: invoices ?? [],
+      memberships,
+      projects: projectRows,
+      milestones: (milestones ?? []) as Milestone[],
+      tasks: (tasks ?? []) as Task[],
+      approvals: (approvals ?? []) as Approval[],
+      invoices: (invoices ?? []) as Invoice[],
+      invites: (invites ?? []) as ProjectInvite[],
     })
-    setSelectedProjectId((current) => current ?? projects?.[0]?.id ?? null)
+    setSelectedProjectId((current) => preferredProjectId ?? current ?? projectRows[0]?.id ?? null)
     setLoading(false)
   }
 
+  async function acceptInviteIfPresent() {
+    if (!supabase || !inviteToken || acceptingInvite) return false
+    setAcceptingInvite(true)
+    setError(null)
+    const { data: project, error: inviteError } = await supabase.rpc('accept_project_invite', { p_invite_token: inviteToken })
+    setAcceptingInvite(false)
+    if (inviteError) {
+      setError(inviteError.message)
+      return false
+    }
+    const acceptedProject = project as Project | null
+    setInviteStatus('Invite accepted. Your client portal is now attached to this account.')
+    window.history.replaceState({}, document.title, window.location.pathname)
+    await loadData(acceptedProject?.id)
+    return true
+  }
+
   useEffect(() => {
-    void Promise.resolve().then(() => loadData())
+    void Promise.resolve().then(async () => {
+      const accepted = await acceptInviteIfPresent()
+      if (!accepted) await loadData()
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -277,11 +324,13 @@ function Dashboard({ session }: { session: Session }) {
     if (!supabase || !data.workspace || !projectName.trim()) return
     setSaving(true)
     setError(null)
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .insert({ workspace_id: data.workspace.id, name: projectName, client_name: clientName || 'Client', status: 'active', currency: 'USD' })
-      .select('*')
-      .single()
+    const { data: project, error: projectError } = await supabase.rpc('create_project_with_seed_data', {
+      p_workspace_id: data.workspace.id,
+      p_project_name: projectName,
+      p_client_name: clientName || 'Client',
+      p_client_email: clientEmail || null,
+      p_currency: 'USD',
+    })
 
     if (projectError || !project) {
       setError(projectError?.message ?? 'Could not create project')
@@ -289,32 +338,62 @@ function Dashboard({ session }: { session: Session }) {
       return
     }
 
-    await Promise.all([
-      supabase.from('milestones').insert([
-        { project_id: project.id, title: 'Kickoff + scope lock', status: 'approved', sort_order: 1 },
-        { project_id: project.id, title: 'First delivery review', status: 'in_progress', sort_order: 2 },
-        { project_id: project.id, title: 'Final approval + handoff', status: 'pending', sort_order: 3 },
-      ]),
-      supabase.from('tasks').insert([
-        { project_id: project.id, title: 'Confirm deliverables and success criteria', status: 'done', priority: 'high' },
-        { project_id: project.id, title: 'Share staging preview link', status: 'doing', priority: 'normal' },
-        { project_id: project.id, title: 'Collect revision notes', status: 'todo', priority: 'normal' },
-      ]),
-      supabase.from('approvals').insert({ project_id: project.id, title: 'Approve first delivery direction', status: 'pending' }),
-      supabase.from('invoices').insert({ project_id: project.id, label: 'Deposit / Milestone 1', amount: 500, currency: 'USD', status: 'sent' }),
-    ])
-
+    const createdProject = project as Project
     setProjectName('')
     setClientName('')
-    setSelectedProjectId(project.id)
+    setClientEmail('')
+    setSelectedProjectId(createdProject.id)
     setSaving(false)
-    await loadData()
+    await loadData(createdProject.id)
   }
 
   async function updateProjectStatus(project: Project, status: Project['status']) {
-    if (!supabase) return
+    if (!supabase || !canManageProjectData(membershipByWorkspace.get(project.workspace_id)?.role)) return
     await supabase.from('projects').update({ status }).eq('id', project.id)
-    await loadData()
+    await loadData(project.id)
+  }
+
+  async function createClientInvite(project: Project) {
+    if (!supabase || !canManageSelectedProject) return
+    setSaving(true)
+    setInviteStatus(null)
+    setInviteUrl(null)
+    const token = createInviteToken()
+    const tokenHash = await sha256Hex(token)
+    const { error: inviteError } = await supabase.from('project_invites').insert({
+      project_id: project.id,
+      invited_email: project.client_email,
+      token_hash: tokenHash,
+    })
+    setSaving(false)
+    if (inviteError) {
+      setError(inviteError.message)
+      return
+    }
+    const url = buildInviteUrl(window.location.origin, token)
+    setInviteUrl(url)
+    setInviteStatus('Invite link created. Copy it now — only the hashed token is stored.')
+    await loadData(project.id)
+  }
+
+  async function copyInviteUrl() {
+    if (!inviteUrl) return
+    await navigator.clipboard.writeText(inviteUrl)
+    setInviteStatus('Invite link copied to clipboard.')
+  }
+
+  async function decideApproval(approval: Approval, status: Approval['status']) {
+    if (!supabase || !selectedProject) return
+    const { error: approvalError } = await supabase.rpc('submit_approval_decision', {
+      p_approval_id: approval.id,
+      p_status: status,
+      p_note: null,
+    })
+    if (approvalError) {
+      setError(approvalError.message)
+      return
+    }
+    await loadData(selectedProject.id)
   }
 
   async function signOut() {
@@ -328,23 +407,30 @@ function Dashboard({ session }: { session: Session }) {
     <section className="dashboard" id="dashboard" ref={dashboardRef}>
       <div className="dash-top">
         <div>
-          <p className="eyebrow"><Table2 size={16} /> Founder beta workspace</p>
-          <h2>{data.workspace?.studio_name || data.workspace?.name || 'Your studio'} workspace</h2>
-          <p>Signed in as {session.user.email}. A dense, readable command center for scope, approvals, tasks, and manual invoices.</p>
+          <p className="eyebrow"><Table2 size={16} /> {isSelectedClient ? 'Client portal' : 'Founder beta workspace'}</p>
+          <h2>{selectedWorkspace?.studio_name || selectedWorkspace?.name || 'Your studio'} workspace</h2>
+          <p>Signed in as {session.user.email}. {isSelectedClient ? 'Client-safe view: approvals, milestones, tasks, and invoices without internal edit access.' : 'A dense, readable command center for scope, approvals, tasks, client invites, and manual invoices.'}</p>
         </div>
         <button className="ghost" onClick={signOut}><DoorOpen size={18} /> Sign out</button>
       </div>
 
       {error && <div className="error-box">{error}</div>}
+      {inviteStatus && <div className="success-box"><ShieldCheck size={18} /> {inviteStatus}</div>}
+      {acceptingInvite && <div className="share-strip"><ShieldCheck size={18} /> Accepting invite and attaching your client portal…</div>}
 
       <div className="dash-grid">
         <aside className="sidebar-panel app-sidebar">
-          <h3>Create project</h3>
-          <form onSubmit={createProject} className="compact-form">
-            <input value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="Project name" />
-            <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Client name" />
-            <button disabled={saving || !projectName.trim()}><Plus size={16} /> {saving ? 'Creating…' : 'Create portal'}</button>
-          </form>
+          {canManageProjectData((data.memberships.find((membership) => data.workspace?.id === membership.workspace_id)?.role ?? null) as WorkspaceRole | null) && (
+            <>
+              <h3>Create project</h3>
+              <form onSubmit={createProject} className="compact-form">
+                <input value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="Project name" />
+                <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Client name" />
+                <input value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="Client email for invite" type="email" />
+                <button disabled={saving || !projectName.trim()}><Plus size={16} /> {saving ? 'Creating…' : 'Create portal'}</button>
+              </form>
+            </>
+          )}
           <h3>Projects</h3>
           <div className="project-list">
             {data.projects.map((project) => (
@@ -362,12 +448,14 @@ function Dashboard({ session }: { session: Session }) {
             <>
               <div className="project-header">
                 <div>
-                  <p className="eyebrow"><Users2 size={16} /> {selectedProject.client_name}</p>
+                  <p className="eyebrow"><Users2 size={16} /> {selectedProject.client_name} · {selectedRole ?? 'viewer'}</p>
                   <h2>{selectedProject.name}</h2>
                 </div>
-                <select value={selectedProject.status} onChange={(e) => updateProjectStatus(selectedProject, e.target.value as Project['status'])}>
-                  {projectStatuses.map((status) => <option key={status}>{status}</option>)}
-                </select>
+                {canManageSelectedProject ? (
+                  <select value={selectedProject.status} onChange={(e) => updateProjectStatus(selectedProject, e.target.value as Project['status'])}>
+                    {projectStatuses.map((status) => <option key={status}>{status}</option>)}
+                  </select>
+                ) : <em>{selectedProject.status}</em>}
               </div>
 
               <div className="metric-grid">
@@ -387,13 +475,34 @@ function Dashboard({ session }: { session: Session }) {
                 </section>
                 <section className="board-card">
                   <h3>Approvals</h3>
-                  {projectApprovals.map((item) => <div className="line-item" key={item.id}><span>{item.title}</span><em>{item.status}</em></div>)}
+                  {projectApprovals.map((item) => (
+                    <div className="approval-item" key={item.id}>
+                      <div className="line-item"><span>{item.title}</span><em>{item.status}</em></div>
+                      {isSelectedClient && item.status === 'pending' && (
+                        <div className="approval-actions">
+                          <button onClick={() => decideApproval(item, 'approved')}><CheckCircle2 size={15} /> Approve</button>
+                          <button onClick={() => decideApproval(item, 'revision_requested')}><XCircle size={15} /> Request revision</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                   <h3>Payments</h3>
                   {projectInvoices.map((item) => <div className="line-item" key={item.id}><span>{item.label}</span><em>{currency(Number(item.amount), item.currency)} · {item.status}</em></div>)}
                 </section>
               </div>
 
-              <div className="share-strip"><Link2 size={18} /> Client-share links and invite flow are next. For beta, this dashboard validates the core portal workflow.</div>
+              <div className="share-strip">
+                <Link2 size={18} />
+                {canManageSelectedProject ? (
+                  <div className="invite-flow">
+                    <strong>Client invite workflow</strong>
+                    <span>{data.invites.filter((invite) => invite.project_id === selectedProject.id).length} invite record(s) for this project.</span>
+                    <button onClick={() => createClientInvite(selectedProject)} disabled={saving}><Link2 size={15} /> {saving ? 'Creating…' : 'Create secure invite link'}</button>
+                    {inviteUrl && <button className="secondary-button" onClick={copyInviteUrl}><Copy size={15} /> Copy invite link</button>}
+                    {inviteUrl && <code>{inviteUrl}</code>}
+                  </div>
+                ) : 'You are viewing the client-safe portal. Internal project edits and membership management are locked.'}
+              </div>
             </>
           ) : (
             <div className="empty-state"><h3>Create your first portal</h3><p>Start with a real or demo client project. The app will seed starter milestones, tasks, approval, and payment status.</p></div>
@@ -407,6 +516,7 @@ function Dashboard({ session }: { session: Session }) {
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [booting, setBooting] = useState(true)
+  const inviteToken = normalizeInviteToken(window.location.href)
 
   useEffect(() => {
     if (!supabase) {
@@ -428,7 +538,7 @@ function App() {
   return (
     <main className="page">
       <Landing session={session} />
-      {booting ? <section className="auth-card">Checking session…</section> : session ? <Dashboard session={session} /> : <AuthPanel />}
+      {booting ? <section className="auth-card">Checking session…</section> : session ? <Dashboard session={session} inviteToken={inviteToken} /> : <AuthPanel inviteToken={inviteToken} />}
       <footer>
         <span>ClientFlow Lite · built for freelance developers worldwide</span>
         <a href="mailto:afumoons@gmail.com"><Mail size={16} /> Contact founder</a>
