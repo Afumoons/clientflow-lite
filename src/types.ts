@@ -21,6 +21,8 @@ export type ProjectInvite = {
   token_hash: string
   accepted_by: string | null
   accepted_at: string | null
+  revoked_by: string | null
+  revoked_at: string | null
   expires_at: string
   created_at: string
 }

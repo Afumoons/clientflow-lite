@@ -172,3 +172,21 @@ footer a { display: inline-flex; gap: 8px; align-items: center; color: var(--the
   .workspace-grid { grid-template-columns: 1.2fr .8fr; }
   .workspace-grid > div:nth-child(4n) { border-right: 1px solid var(--theme-soft-line); }
 }
+
+.error-fallback { margin-top: 64px; }
+.inline-create { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-bottom: 12px; }
+.invoice-create { grid-template-columns: 1fr 110px auto; }
+.inline-create input { padding: 10px 11px; }
+.inline-create button, .icon-button, .invite-row button, .row-actions button { border: 1px solid var(--theme-line); border-radius: 10px; background: #fff; color: var(--theme-blue); padding: 8px 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 800; }
+.editable-row { align-items: center; }
+.row-actions { display: inline-flex; gap: 6px; align-items: center; justify-content: end; }
+.row-actions select { min-width: 118px; padding: 8px 9px; }
+.task-lane p { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.approval-item small { display: block; color: var(--theme-weak); margin-top: 6px; }
+.approval-actions textarea { width: 100%; min-height: 72px; border: 1px solid var(--theme-line); border-radius: 12px; padding: 11px 12px; resize: vertical; font: inherit; }
+.invite-list { display: grid; gap: 7px; margin-top: 8px; }
+.invite-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--theme-soft-line); border-radius: 12px; background: rgba(255,255,255,.65); padding: 8px 10px; }
+@media (max-width: 620px) {
+  .invoice-create, .inline-create, .task-lane p, .invite-row { grid-template-columns: 1fr; }
+  .row-actions { justify-content: start; flex-wrap: wrap; }
+}
